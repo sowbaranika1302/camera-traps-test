@@ -5,8 +5,6 @@ import uuid
 from collections import OrderedDict
 import zmq
 from PIL import Image
-import threading
-import concurrent.futures
 import ctevents
 from pyevents.events import get_plugin_socket, get_next_msg, send_quit_command
 
@@ -27,8 +25,7 @@ def get_socket():
 
 def get_binary(value):
     """
-    This function is used to generate the uuid, image format and binary image and invokes the  
-    new image event.
+    TODO -- Sowbaranika to add
     """
     uuid_image = str(uuid.uuid5(uuid.NAMESPACE_URL, value))
     with open(value, "rb") as f:
@@ -42,12 +39,10 @@ def get_binary(value):
 
 def simpleNext(i, value_index):
     """
-    This function is used to retrieve the next image specified in the directory based on the timestamp
-    and invokes get binary function.
+    TODO -- Sowbaranika to add
     """
     if i >= len(img_dict):
-        done = True
-        print(f"Hit exit condition; i: {i}; len(img_dict): {len(img_dict)}; done = {done}")
+        print(f"Hit exit condition; i: {i}; len(img_dict): {len(img_dict)}")
         exit()
     value = list(img_dict.values())[i][value_index]
     get_binary(value)
@@ -59,8 +54,7 @@ def simpleNext(i, value_index):
 
 def burstNext(index):
     """
-    This function send the next x (burstQuantity specified) images specified in the directory based on the timestamp
-    and invokes get binary function. 
+    TODO -- Sowbaranika to add
     """
     # TODO -- burstNext currently produces the same behavior as simpleNext. We 
     #         should think through how to achieve burst behavior in a simulation.
@@ -76,8 +70,7 @@ def burstNext(index):
 
 def identicalTimestamp(timestamp_min):
     """
-    Incase of multiple images with same timestamp, this function gets single image
-    and invokes get binary function.
+    TODO -- Sowbaranika to add
     """
     if timestamp_min not in img_dict.keys():
         print(f"Hit exit condition...timestamp_min not in img_dict.keys()")
@@ -91,14 +84,12 @@ def identicalTimestamp(timestamp_min):
 
 def nextImage(timestamp_min, index):
     """
-    For a given static time interval(t), this fucntion gives the next image t seconds forward.
-    Binary search algorithm is used to minimize the search time.
+    TODO -- Sowbaranika to add
     """
     # TODO -- currently, the nextImage function depends on OS timestamps on the input images, 
     #         and therefore may not function/may give unexpected results. 
     if index >= len(img_dict):
         print(f"Hitting exit condition; index: {index}; len(image_dict): {len(img_dict)}")
-        
         exit()
     if timestamp_min > timestamp_max:
         print(f"Hitting exit condition; timestamp_min: {timestamp_min}; timestamp_max: {timestamp_max}")
@@ -123,8 +114,7 @@ def nextImage(timestamp_min, index):
 
 def randomImage(timestamp_min, index):
     """
-    For a given dynamic time interval(t), this fucntion gives the next image t seconds forward.
-    Binary search algorithm is used to minimize the search time.
+    TODO -- Sowbaranika to add
     """
     if index >= len(img_dict) or timestamp_min > timestamp_max:
         exit()
@@ -153,10 +143,7 @@ with open('input.json') as f:
 user_input = data['path']
 print(f"user_input: {user_input}")
 start = int(data['timestamp'])
-"""
-Creates an ordered dictionary with the image files in the directory.
-Future: Think of a way to minimize the memory usage
-"""
+
 
 list_of_files = filter(os.path.isfile, glob.glob(user_input + '/*'))
 list_of_files = sorted(list_of_files, key=os.path.getmtime)
@@ -171,31 +158,6 @@ for file_name_full in list_of_files:
             img_dict[timestamp] = [file_name_full]
 timestamp_max = list(img_dict.keys())[len(img_dict) - 1]
 socket = get_socket()
-done = False
-
-def send_new_image(data, index, indexvalue):
-        print(f"top of send_new_image; data: {data}")
-        if data['callingFunction'] == "nextImage":
-            print("Timed Next")
-            timestamp_min, initial_index = nextImage(
-                timestamp_min, initial_index)
-        elif data['callingFunction'] == "burstNext":
-            print("Burst Next")
-            index = burstNext(index)
-        elif data['callingFunction'] == "identicalTimestamp":
-            print("Identical Timestamp")
-            timestamp_min = identicalTimestamp(timestamp_min)
-            print(timestamp_min)
-        elif data['callingFunction'] == "randomImage":
-            print("Random Image")
-            random_timestamp = int(
-                input("Enter the random timestamp in seconds: "))
-            timestamp_min += random_timestamp
-            timestamp_min, initial_index = randomImage(
-                timestamp_min, initial_index)
-        else:
-            print(f"Simple Next")
-            index, indexvalue = simpleNext(index, indexvalue)
 
 
 def main():
@@ -204,25 +166,28 @@ def main():
     index = 0
     indexvalue = 0
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        # run send_new_image and get_next_msg concurrently
-        thread1 = executor.submit(send_new_image, data, index, indexvalue)
-        thread2 = executor.submit(get_next_msg, socket)
-        message = thread2.result()
-    send_quit_command(socket)
-
+    done = False
     # while not done:
-    #     with concurrent.futures.ThreadPoolExecutor() as executor:
-    #         # run send_new_image and get_next_msg concurrently
-    #         thread1 = executor.submit(send_new_image, data)
-    #         thread2 = executor.submit(get_next_msg, socket)
-	
-    #     # check new message for terminate event
-    #     message = thread2.result()
-    #     if message == 'PluginTerminateEvent':
-    #         break
-
-    send_quit_command(socket)
+    for i in range(0, 15):
+        if data['callingFunction'] == "nextImage":
+            print("Timed Next")
+            timestamp_min, initial_index = nextImage(
+                timestamp_min, initial_index)
+        elif data['callingFunction'] == "burstNext":
+            print("Burst Next")
+            index = burstNext(index)
+        elif data['callingFunction'] == "identicalTimestamp":
+            timestamp_min = identicalTimestamp(timestamp_min)
+            print(timestamp_min)
+        elif data['callingFunction'] == "randomImage":
+            random_timestamp = int(
+                input("Enter the random timestamp in seconds: "))
+            timestamp_min += random_timestamp
+            timestamp_min, initial_index = randomImage(
+                timestamp_min, initial_index)
+        else:
+            print(f"Simple Next; index: {index}; indexvalue: {indexvalue} ")
+            index, indexvalue = simpleNext(index, indexvalue)
 
 
 if __name__ == '__main__':
